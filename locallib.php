@@ -429,7 +429,7 @@ class mod_hotquestion {
                         get_string('userid', 'hotquestion'),
                         get_string('time', 'hotquestion'),
                         get_string('anonymous', 'hotquestion'),
-                        get_string('voters'));
+                        get_string('voters', 'hotquestion'));
         fputcsv($file, $params, $delimiter);
 
         $sql = "SELECT hq.id id,
@@ -442,7 +442,7 @@ class mod_hotquestion {
                 FROM_UNIXTIME(hq.time) AS TIME, hq.anonymous anonymous, group_concat(v.voter)
                 FROM {hotquestion_questions} hq
                 JOIN {user} u ON u.id = hq.userid
-                LEFT JOIN {hotquestion_votes} v on v.question = hq.id
+                LEFT JOIN {hotquestion_votes} v ON v.question = hq.id
                 GROUP BY hq.id
                 WHERE hq.userid > 0 ";
         $sql .= ($whichhqs);
