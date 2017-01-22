@@ -429,7 +429,7 @@ class mod_hotquestion {
                         get_string('userid', 'hotquestion'),
                         get_string('time', 'hotquestion'),
                         get_string('anonymous', 'hotquestion'),
-                        get_string('voters', 'hotquestion'));
+                        'voters');
         fputcsv($file, $params, $delimiter);
 
         $sql = "SELECT hq.id id,
