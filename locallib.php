@@ -428,7 +428,8 @@ class mod_hotquestion {
                         get_string('content', 'hotquestion'),
                         get_string('userid', 'hotquestion'),
                         get_string('time', 'hotquestion'),
-                        get_string('anonymous', 'hotquestion'));
+                        get_string('anonymous', 'hotquestion'),
+                        get_string('voters'));
         fputcsv($file, $params, $delimiter);
 
         $sql = "SELECT hq.id id,
@@ -438,15 +439,17 @@ class mod_hotquestion {
                     ELSE u.firstname
                 END AS 'firstname',
                         u.lastname AS 'lastname', hq.hotquestion hotquestion, hq.content content, hq.userid userid,
-                FROM_UNIXTIME(hq.time) AS TIME, hq.anonymous anonymous
+                FROM_UNIXTIME(hq.time) AS TIME, hq.anonymous anonymous, group_concat(v.voter)
                 FROM {hotquestion_questions} hq
                 JOIN {user} u ON u.id = hq.userid
+                LEFT JOIN {hotquestion_votes} v on v.question = hq.id
+                GROUP BY hq.id
                 WHERE hq.userid > 0 ";
         $sql .= ($whichhqs);
         $sql .= " ORDER BY hq.hotquestion, u.id";
         if ($hqs = $DB->get_records_sql($sql, $params)) {
             foreach ($hqs as $q) {
-                $fields = array($q->id, $q->firstname, $q->lastname, $q->hotquestion, $q->content, $q->userid, $q->time, $q->anonymous);
+                $fields = array($q->id, $q->firstname, $q->lastname, $q->hotquestion, $q->content, $q->userid, $q->time, $q->anonymous, $q->voters);
                 fputcsv($file, $fields, $delimiter);
             }
         }
