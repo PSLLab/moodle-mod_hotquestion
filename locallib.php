@@ -29,15 +29,39 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+/**
+ * Standard base class for mod_hotquestion.
+ *
+ * @package   mod_hotquestion
+ * @copyright 2011 Sun Zhigang
+ * @copyright 2016 onwards AL Rachels drachels@drachels.com
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class mod_hotquestion {
+
+    /** @var int callback arg - the instance of the current hotquestion activity */
     public $instance;
+    /** @var int callback arg - the instance of the current hotquestion module */
     public $cm;
+    /** @var int callback arg - the instance of the current hotquestion course */
     public $course;
 
+    /** @var int callback arg - the id of current round of questions */
     protected $currentround;
+    /** @var int callback arg - the id of previous round of questions */
     protected $prevround;
+    /** @var int callback arg - the id of next round of questions */
     protected $nextround;
 
+    /**
+     * Constructor for the base hotquestion class.
+     *
+     * Note: For $coursemodule you can supply a stdclass if you like, but it
+     * will be more efficient to supply a cm_info object.
+     *
+     * @param mixed $cmid
+     * @param mixed $roundid
+     */
     public function __construct($cmid, $roundid = -1) {
         global $DB;
         $this->cm        = get_coursemodule_from_id('hotquestion', $cmid, 0, false, MUST_EXIST);
@@ -64,9 +88,6 @@ class mod_hotquestion {
     /**
      * Add a new question to current round.
      *
-     * @global object
-     * @global object
-     * @global object
      * @param object $fromform from ask form
      */
     public function add_new_question($fromform) {
@@ -104,8 +125,6 @@ class mod_hotquestion {
     /**
      * Vote on question.
      *
-     * @global object
-     * @global object
      * @param int $question the question id
      */
     public function vote_on($question) {
@@ -140,8 +159,8 @@ class mod_hotquestion {
     /**
      * Whether can vote on the question.
      *
-     * @param object or int $question
-     * @param object $user null means current user
+     * @param int $question
+     * @param stdClass $user null means current user
      */
     public function can_vote_on($question, $user = null) {
         global $USER, $DB;
@@ -163,8 +182,6 @@ class mod_hotquestion {
 
     /**
      * Open a new round and close the old one.
-     *
-     * @global object
      */
     public function add_new_round() {
         global $USER, $CFG, $DB;
@@ -192,14 +209,13 @@ class mod_hotquestion {
             $event = \mod_hotquestion\event\add_round::create($params);
             $event->trigger();
         } else {
-            add_to_log($this->course->id, 'hotquestion', 'add round', "view.php?id={$this->cm->id}&round=$rid", $rid, $this->cm->id);
+            add_to_log($this->course->id, 'hotquestion', 'add round',
+                "view.php?id={$this->cm->id}&round=$rid", $rid, $this->cm->id);
         }
     }
 
     /**
      * Set current round to show.
-     *
-     * @global object
      * @param int $roundid
      */
     public function set_currentround($roundid = -1) {
@@ -271,8 +287,6 @@ class mod_hotquestion {
 
     /**
      * Return questions according to $currentround.
-     *
-     * @global object
      * @return all questions with vote count in current round.
      */
     public function get_questions() {
@@ -299,6 +313,16 @@ class mod_hotquestion {
      */
     public function remove_question() {
         global $DB;
+
+        $data = new StdClass();
+        $data->hotquestion = $this->instance->id;
+        $context = context_module::instance($this->cm->id);
+        // Trigger remove_round event.
+        $event = \mod_hotquestion\event\remove_question::create(array(
+            'objectid' => $data->hotquestion,
+            'context' => $context
+        ));
+        $event->trigger();
         if (isset($_GET['q'])) {
             $questionid = $_GET['q'];
             $dbquestion = $DB->get_record('hotquestion_questions', array('id' => $questionid));
@@ -385,11 +409,14 @@ class mod_hotquestion {
 
     /**
      * Download questions.
-     *
+     * @param array $array
+     * @param string $filename - The filename to use.
+     * @param string $delimiter - The character to use as a delimiter.
      * @return nothing
      */
     public function download_questions($array, $filename = "export.csv", $delimiter=";") {
         global $CFG, $DB, $USER;
+        require_once($CFG->libdir.'/csvlib.class.php');
         $data = new StdClass();
         $data->hotquestion = $this->instance->id;
         $context = context_module::instance($this->cm->id);
@@ -402,35 +429,32 @@ class mod_hotquestion {
 
         // Construct sql query and filename based on admin or teacher.
         // Add filename details based on course and HQ activity name.
+        $csv = new csv_export_writer();
+        $strhotquestion = get_string('hotquestion', 'hotquestion');
         if (is_siteadmin($USER->id)) {
             $whichhqs = ('AND hq.hotquestion > 0');
-            $filename = get_string('exportfilenamep1', 'hotquestion');
+            $csv->filename = clean_filename(get_string('exportfilenamep1', 'hotquestion'));
         } else {
             $whichhqs = ('AND hq.hotquestion = ');
             $whichhqs .= ($this->instance->id);
-            $filename = ($this->course->shortname).'_';
-            $filename .= ($this->instance->name);
+            $csv->filename = clean_filename(($this->course->shortname).'_');
+            $csv->filename .= clean_filename(($this->instance->name));
         }
-        $filename .= get_string('exportfilenamep2', 'hotquestion').gmdate("Ymd_Hi").'GMT.csv';
+        $csv->filename .= clean_filename(get_string('exportfilenamep2', 'hotquestion').gmdate("Ymd_Hi").'GMT.csv');
 
-        $params = array();
+        $fields = array();
 
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachement; filename="'.$filename.'";');
-        header("Pragma: no-cache");
-        header("Expires: 0");
-
-        $file = fopen('php://output', 'w');
-        $params = array(get_string('id', 'hotquestion'),
-                        get_string('firstname'),
+        $fields = array(get_string('firstname'),
                         get_string('lastname'),
+                        get_string('id', 'hotquestion'),
                         get_string('hotquestion', 'hotquestion'),
                         get_string('content', 'hotquestion'),
                         get_string('userid', 'hotquestion'),
                         get_string('time', 'hotquestion'),
                         get_string('anonymous', 'hotquestion'),
                         'Voters');
-        fputcsv($file, $params, $delimiter);
+        // Add the headings to our data array.
+        $csv->add_data($fields);
 
         $sql = "SELECT hq.id id,
                 CASE
@@ -446,13 +470,15 @@ class mod_hotquestion {
                 WHERE hq.userid > 0 ";
         $sql .= ($whichhqs);
         $sql .= " GROUP BY hq.id ORDER BY hq.hotquestion, u.id";
-        if ($hqs = $DB->get_records_sql($sql, $params)) {
+        // Add the list of users and HotQuestions to our data array.
+        if ($hqs = $DB->get_records_sql($sql, $fields)) {
             foreach ($hqs as $q) {
-                $fields = array($q->id, $q->firstname, $q->lastname, $q->hotquestion, $q->content, $q->userid, $q->time, $q->anonymous, $q->voters);
-                fputcsv($file, $fields, $delimiter);
+                $output = array($q->firstname, $q->lastname, $q->id, $q->hotquestion, $q->content, $q->userid, $q->time, $q->anonymous, $q->voters);
+                $csv->add_data($output);
             }
         }
-        fclose($file);
+        // Download the completed array.
+        $csv->download_file();
         exit;
     }
 }
@@ -460,6 +486,8 @@ class mod_hotquestion {
 /**
  * Count questions in current rounds.
  * Counts all the hotquestion entries (optionally in a given group)
+ * @param var $hotquestion
+ * @param int $groupid
  * @return nothing
  */
 function hotquestion_count_entries($hotquestion, $groupid = 0) {
@@ -470,11 +498,14 @@ function hotquestion_count_entries($hotquestion, $groupid = 0) {
     $context = context_module::instance($cm->id);
     // Currently, groups are not being used by Hot Question.
     if ($groupid) {     // How many in a particular group?
-
-        $sql = "SELECT DISTINCT u.id FROM {hotquestion_questions} hq
-                JOIN {groups_members} g ON g.userid = hq.userid
-                JOIN {user} u ON u.id = g.userid
-                WHERE hq.hotquestion = $hotquestion->id AND g.groupid = '$groupid'";
+        // I've temporarily replaced broken group $sql until groups are implemented. See tracker for old code.
+        $sql = "SELECT COUNT(DISTINCT hq.userid) AS ucount, COUNT(DISTINCT hq.content) AS qcount FROM {hotquestion_questions} hq
+                JOIN {user} u ON u.id = hq.userid
+                LEFT JOIN {hotquestion_rounds} hr ON hr.hotquestion=hq.hotquestion
+                WHERE hq.hotquestion = '$hotquestion->id' AND
+                hr.endtime=0 AND
+                hq.time>=hr.starttime AND
+                hq.userid>0";
         $hotquestions = $DB->get_records_sql($sql);
 
     } else { // Count all the entries from the whole course.
@@ -503,7 +534,7 @@ function hotquestion_count_entries($hotquestion, $groupid = 0) {
     /**
      * Returns availability status.
      * Added 10/2/16.
-     *
+     * @param var $hotquestion
      */
 function hq_available($hotquestion) {
     $timeopen = $hotquestion->timeopen;
@@ -514,7 +545,7 @@ function hq_available($hotquestion) {
 /**
  * Returns the hotquestion instance course_module id
  *
- * @param integer $hotquestion
+ * @param var $hotquestionid
  * @return object
  */
 function hotquestion_get_coursemodule($hotquestionid) {

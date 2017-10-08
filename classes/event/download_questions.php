@@ -25,6 +25,14 @@
 namespace mod_hotquestion\event;
 defined('MOODLE_INTERNAL') || die();
 
+/**
+ * The mod_hotquestion download questions class.
+ *
+ * @package    mod_hotquestion
+ * @since      Moodle 2.7
+ * @copyright  2016 drachels@drachels.com
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class download_questions extends \core\event\base {
 
     /**
@@ -52,7 +60,7 @@ class download_questions extends \core\event\base {
      */
     public function get_description() {
         return "The user with id '$this->userid' has downloaded questions for the hotquestion activity with the course module id
-            '$this->contextinstanceid'";
+            '$this->contextinstanceid'.";
     }
 
     /**

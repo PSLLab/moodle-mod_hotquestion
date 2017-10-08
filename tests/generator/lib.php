@@ -15,24 +15,37 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The mod_hotquestion instance list viewed event.
+ * hotquestion data generator
  *
  * @package    mod_hotquestion
- * @copyright  2014 drachels@drachels.com
+ * @copyright  AL Rachels drachels@drachels.com
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace mod_hotquestion\event;
 defined('MOODLE_INTERNAL') || die();
 
+
 /**
- * The mod_hotquestion instance list viewed event class.
+ * hotquestion module data generator class
  *
  * @package    mod_hotquestion
- * @since      Moodle 2.7
- * @copyright  2014 drachels@drachels.com
+ * @copyright  AL Rachels drachels@drachels.com
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class course_module_instance_list_viewed extends \core\event\course_module_instance_list_viewed {
-    // No need for any code here as everything is handled by the parent class.
+class mod_hotquestion_generator extends testing_module_generator {
+
+    /**
+     * @var int keep track of how many hotquestions have been created.
+     */
+    private $hotquestioncount = 0;
+
+    /**
+     * To be called from data reset code only,
+     * do not use in tests.
+     * @return void
+     */
+    public function reset() {
+        $this->hotquestioncount = 0;
+        parent::reset();
+    }
 }

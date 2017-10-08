@@ -95,7 +95,7 @@ if (!$ajax) {
             array('connectionerror', 'hotquestion')
         )
     );
-    // $PAGE->requires->js_init_call('M.mod_hotquestion.init', null, false, $jsmodule);
+
     $PAGE->requires->js_init_call('M.mod_hotquestion.init', null, true, $jsmodule);
 }
 
@@ -144,20 +144,11 @@ if (!empty($action)) {
         case 'remove':
             if (has_capability('mod/hotquestion:manageentries', $context)) {
                 $q = required_param('q',  PARAM_INT);  // Question id to remove.
-                // Call remove function in locallib.
+                // Call remove_question function in locallib.
                 $hq->remove_question($q);
                 // Need redirect that goes to the round where removing question.
                 redirect('view.php?id='.$hq->cm->id, get_string('questionremovesuccess', 'hotquestion'));
                 // Does work without it as it just defaults to current round.
-                // Trigger remove_question event.
-                $event = \mod_hotquestion\event\remove_question::create(array(
-                    'objectid' => $hotquestion->id,
-                    'context' => $context
-                ));
-                $event->add_record_snapshot('course_modules', $cm);
-                $event->add_record_snapshot('course', $course);
-                $event->add_record_snapshot('hotquestion', $hotquestion);
-                $event->trigger();
             }
             break;
         case 'download':
@@ -181,13 +172,15 @@ if (!$ajax) {
         // Check availability timeopen and timeclose. Added 10/2/16.
         if (!(hq_available($hotquestion))) {  // Availability restrictions.
             if ($hotquestion->timeclose != 0 && time() > $hotquestion->timeclose) {
-                echo $output->hotquestion_inaccessible(get_string('hotquestionclosed', 'hotquestion', userdate($hotquestion->timeclose)));
+                echo $output->hotquestion_inaccessible(get_string('hotquestionclosed',
+                    'hotquestion', userdate($hotquestion->timeclose)));
             } else {
-                echo $output->hotquestion_inaccessible(get_string('hotquestionopen', 'hotquestion', userdate($hotquestion->timeopen)));
+                echo $output->hotquestion_inaccessible(get_string('hotquestionopen',
+                    'hotquestion', userdate($hotquestion->timeopen)));
             }
             echo $OUTPUT->footer();
             exit();
-            // } else if {   // Password code can go here.
+            // Password code can go here. e.g. // } else if {.
         }
     }
     // Print hotquestion description.

@@ -8,6 +8,13 @@ which can access the moodle site. Students can also vote on others'
 questions, so that the hottest questions will be popped up to the top of
 the list. Teachers can make oral comments on selected questions in classroom.
 
+June 2017 Added 10 Behat tests.
+Changed the code for Export to CSV to make it simpler.
+Changed the order of the fields exported in Export to CSV. MS Excel will not open files
+in which the first record is "ID" so it was moved from column 1 to column 3.
+
+May 2017, fixed code style and documentation errors and warnings.
+Moved remove_question event from view.php to function remove_question in locallib.php
 Added new setting capability 10/6/2016 to display description on a course page.
 Added new setting capability 10/6/2016 for availability dates for open and close.
 Added new setting capability 10/6/2016 to allow creator to change wording of submit
@@ -39,7 +46,7 @@ any question in the current Hot Question activity if they deem the question
 as inappropriate or not applicable to the subject. 
 
 NOTE: If you plan on disciplinary action for any inappropriate question,
-you should download the evidence BEFORE you remove questions ore remove rounds, 
+you should download the evidence BEFORE you remove questions or remove rounds, 
 as once removed, questions and rounds are not recoverable.
 
 Details: https://github.com/hit-moodle/moodle-mod_hotquestion/wiki
@@ -52,7 +59,7 @@ Details: https://github.com/hit-moodle/moodle-mod_hotquestion/wiki
 ## Install from git
 - Navigate to Moodle root folder
 - **git clone git://github.com/drachels/moodle-mod_hotquestion.git mod/hotquestion**
-- **cd mootyper**
+- **cd hotquestion**
 - **git checkout MOODLE_XY_STABLE** (where XY is the moodle version, e.g: MOODLE_30_STABLE, MOODLE_28_STABLE...)
 - Click the 'Notifications' link on the frontpage administration block or **php admin/cli/upgrade.php** if you have access to a command line interpreter.
 
