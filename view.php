@@ -35,6 +35,7 @@ $id = required_param('id', PARAM_INT);                  // Course_module ID.
 $ajax = optional_param('ajax', 0, PARAM_BOOL);          // Asychronous form request.
 $action  = optional_param('action', '', PARAM_ACTION);  // Action(vote, newround).
 $roundid = optional_param('round', -1, PARAM_INT);      // Round id.
+$changegroup = optional_param('group', -1, PARAM_INT);  // Choose the current group.
 
 if (! $cm = get_coursemodule_from_id('hotquestion', $id)) {
     print_error("Course Module ID was incorrect");
@@ -118,13 +119,22 @@ if (has_capability('mod/hotquestion:ask', $context)) {
     }
 }
 
-// Handle vote and newround.
+// Handle priority, vote, newround, removeround, remove question, download questions, and approve question.
 if (!empty($action)) {
     switch ($action) {
+        case 'tpriority':
+            if (has_capability('mod/hotquestion:manageentries', $context)) {
+                $u = required_param('u',  PARAM_INT);  // Flag to change priority up or down.
+                $q = required_param('q',  PARAM_INT);  // Question id to change priority.
+                $hq->tpriority_change($u, $q);
+                redirect('view.php?id='.$hq->cm->id, null); // Needed to prevent priority change on page reload.
+            }
+            break;
         case 'vote':
             if (has_capability('mod/hotquestion:vote', $context)) {
                 $q = required_param('q',  PARAM_INT);  // Question id to vote.
                 $hq->vote_on($q);
+                redirect('view.php?id='.$hq->cm->id, null); // Needed to prevent heat toggle on page reload.
             }
             break;
         case 'newround':
@@ -158,6 +168,14 @@ if (!empty($action)) {
                 $hq->download_questions($q);
             }
             break;
+        case 'approve':
+            if (has_capability('mod/hotquestion:manageentries', $context)) {
+                $q = required_param('q',  PARAM_INT);  // Question id to approve.
+                // Call approve question function in locallib.
+                $hq->approve_question($q);
+                redirect('view.php?id='.$hq->cm->id, null); // Needed to prevent toggle on page reload.
+            }
+            break;
     }
 }
 
@@ -185,6 +203,11 @@ if (!$ajax) {
     }
     // Print hotquestion description.
     echo $output->introduction();
+
+    // Print group information (A drop down box will be displayed if the user
+    // is a member of more than one group, or has access to all groups).
+    groups_print_activity_menu($cm, $CFG->wwwroot . '/mod/hotquestion/view.php?id=' . $cm->id);
+
     // Print the text box for typing submissions in.
     if (has_capability('mod/hotquestion:ask', $context)) {
         $mform->display();
@@ -205,4 +228,3 @@ echo $output->container_end();
 if (!$ajax) {
     echo $output->footer();
 }
-

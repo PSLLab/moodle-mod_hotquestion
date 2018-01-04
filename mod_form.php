@@ -48,6 +48,7 @@ class mod_hotquestion_mod_form extends moodleform_mod {
 
         global $COURSE, $CFG;
         $mform =& $this->_form;
+        $hotquestionconfig = get_config('mod_hotquestion');
 
         // Adding the "general" fieldset, where all the common settings are shown.
         $mform->addElement('header', 'general', get_string('general', 'form'));
@@ -72,6 +73,9 @@ class mod_hotquestion_mod_form extends moodleform_mod {
         // Adding the rest of hotquestion settings, spreading them into this fieldset
         // or adding more fieldsets ('header' elements), if needed for better logic.
 
+        // Add Entries header to form.
+        $mform->addElement('header', 'entrieshdr', get_string('entries', 'hotquestion'));
+
         // Add submit instruction text field here.
         $mform->addElement('text', 'submitdirections', get_string('inputquestion', 'hotquestion'), array('size' => '64'));
         if (!empty($CFG->formatstringstriptags)) {
@@ -79,12 +83,20 @@ class mod_hotquestion_mod_form extends moodleform_mod {
         } else {
             $mform->setType('submitdirections', PARAM_CLEANHTML);
         }
+        $mform->setDefault('submitdirections', $hotquestionconfig->submitinstructions);
+        $mform->addHelpButton('submitdirections', 'inputquestion', 'hotquestion');
         $mform->addRule('submitdirections', null, 'required', null, 'client');
         $mform->addRule('submitdirections', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
 
         // Adding 'anonymouspost' field.
         $mform->addElement('selectyesno', 'anonymouspost', get_string('allowanonymouspost', 'hotquestion'));
+        $mform->addHelpButton('anonymouspost', 'allowanonymouspost', 'hotquestion');
         $mform->setDefault('anonymouspost', '1');
+
+        // Add 'requireapproval' field.
+        $mform->addElement('selectyesno', 'approval', get_string('requireapproval', 'hotquestion'));
+        $mform->addHelpButton('approval', 'requireapproval', 'hotquestion');
+        $mform->setDefault('approval', '0');
 
         // Availability.
         $mform->addElement('header', 'availabilityhdr', get_string('availability'));

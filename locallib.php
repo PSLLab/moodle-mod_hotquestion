@@ -97,6 +97,14 @@ class mod_hotquestion {
         $data->content = trim($fromform->question);
         $data->userid = $USER->id;
         $data->time = time();
+        // Check if approval is required for this HotQuestion activity.
+        if (!($this->instance->approval)) {
+            // If approval is NOT required, then approve the question so everyone can see it.
+            $data->approved = 1;
+        } else {
+            // If approval is required, then mark as not approved so only teachers can see it.
+            $data->approved = 0;
+        }
         $context = context_module::instance($this->cm->id);
         if (isset($fromform->anonymous) && $fromform->anonymous && $this->instance->anonymouspost) {
             $data->anonymous = $fromform->anonymous;
@@ -287,6 +295,9 @@ class mod_hotquestion {
 
     /**
      * Return questions according to $currentround.
+     *
+     * Sort order is priority descending, votecount descending,
+     * and time descending from most recent to oldest.
      * @return all questions with vote count in current round.
      */
     public function get_questions() {
@@ -303,7 +314,7 @@ class mod_hotquestion {
                                         AND q.time >= ?
                                         AND q.time <= ?
                                      GROUP BY q.id
-                                     ORDER BY votecount DESC, q.time DESC', $params);
+                                     ORDER BY tpriority DESC, votecount DESC, q.time DESC', $params);
     }
 
     /**
@@ -452,6 +463,7 @@ class mod_hotquestion {
                         get_string('userid', 'hotquestion'),
                         get_string('time', 'hotquestion'),
                         get_string('anonymous', 'hotquestion'),
+                        get_string('approved', 'hotquestion'),
                         'Voters');
         // Add the headings to our data array.
         $csv->add_data($fields);
@@ -463,7 +475,7 @@ class mod_hotquestion {
                     ELSE u.firstname
                 END AS 'firstname',
                         u.lastname AS 'lastname', hq.hotquestion hotquestion, hq.content content, hq.userid userid,
-                FROM_UNIXTIME(hq.time) AS TIME, hq.anonymous anonymous, group_concat(v.voter) voters
+                FROM_UNIXTIME(hq.time) AS TIME, hq.anonymous anonymous, hq.approved approved, group_concat(v.voter) voters
                 FROM {hotquestion_questions} hq
                 JOIN {user} u ON u.id = hq.userid
                 LEFT JOIN {hotquestion_votes} v ON v.question = hq.id
@@ -473,13 +485,60 @@ class mod_hotquestion {
         // Add the list of users and HotQuestions to our data array.
         if ($hqs = $DB->get_records_sql($sql, $fields)) {
             foreach ($hqs as $q) {
-                $output = array($q->firstname, $q->lastname, $q->id, $q->hotquestion, $q->content, $q->userid, $q->time, $q->anonymous, $q->voters);
+                $output = array($q->firstname, $q->lastname, $q->id, $q->hotquestion,
+                    $q->content, $q->userid, $q->time, $q->anonymous, $q->approved, $q->voters);
                 $csv->add_data($output);
             }
         }
         // Download the completed array.
         $csv->download_file();
         exit;
+    }
+
+    /**
+     * Toggle approval go/stop of current question in current round.
+     *
+     * @param var $question
+     * @return nothing
+     */
+    public function approve_question($question) {
+        global $CFG, $DB, $USER;
+        $context = context_module::instance($this->cm->id);
+        $question = $DB->get_record('hotquestion_questions', array('id' => $question));
+
+        if ($question->approved) {
+            // If currently approved, toggle to disapproved.
+            $question->approved = '0';
+            $DB->update_record('hotquestion_questions', $question);
+        } else {
+            // If currently disapproved, toggle to approved.
+            $question->approved = '1';
+            $DB->update_record('hotquestion_questions', $question);
+        }
+        return;
+    }
+
+    /**
+     * Set teacher priority of current question in current round.
+     *
+     * @param int $u the priority up or down flag.
+     * @param int $question the question id
+     */
+    public function tpriority_change($u, $question) {
+        global $CFG, $DB, $USER;
+
+        $context = context_module::instance($this->cm->id);
+        $question = $DB->get_record('hotquestion_questions', array('id' => $question));
+
+        if ($u) {
+            // If priority flag is 1, increase priority by 1.
+            $question->tpriority = ++$question->tpriority;
+            $DB->update_record('hotquestion_questions', $question);
+        } else {
+            // If priority flag is 0, decrease priority by 1.
+            $question->tpriority = --$question->tpriority;
+            $DB->update_record('hotquestion_questions', $question);
+        }
     }
 }
 
