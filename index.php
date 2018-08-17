@@ -69,7 +69,7 @@ $table->align = array();
 
 if ($usesections) {
     $table->head[]  = get_string('sectionname', 'format_'.$course->format);
-    $table->align[] = 'center';
+    $table->align[] = 'left';
 }
 
 $table->head[]  = get_string('name');
@@ -115,7 +115,6 @@ foreach ($hotquestions as $hotquestion) {
 
     // Questions in current round info.
     if ($entriesmanager) {
-
         // Display the participation column if the user can view questions.
         if (empty($managersomewhere)) {
             $table->head[] = get_string('viewentries', 'hotquestion');
@@ -138,10 +137,8 @@ foreach ($hotquestions as $hotquestion) {
                                  .get_string("viewallentries", "hotquestion", $ec)."</a>";
         }
     } else if (!empty($managersomewhere)) {
-
         $table->data[$i][] = "";
     }
-
     $i++;
 }
 
